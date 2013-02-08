@@ -1,0 +1,327 @@
+<!doctype html>
+<html>
+    <head>
+      <style>
+        body {
+            font-family: Arial;
+            font-size: 11;
+        }
+      </style>
+      
+      <!-- VexFlow Uncompiled Sources -->
+      <script src="vexflow/src/vex.js"></script>
+      <script src="vexflow/src/flow.js"></script>
+      <script src="vexflow/src/fonts/vexflow_font.js"></script>
+      <script src="vexflow/src/glyph.js"></script>
+      <script src="vexflow/src/modifier.js"></script>
+      <script src="vexflow/src/modifiercontext.js"></script>
+      <script src="vexflow/src/tables.js"></script>
+      <script src="vexflow/src/stavemodifier.js"></script>
+      <script src="vexflow/src/stavebarline.js"></script>
+      <script src="vexflow/src/clef.js"></script>
+      <script src="vexflow/src/stave.js"></script>
+      <script src="vexflow/src/tabstave.js"></script>
+      <script src="vexflow/src/tickcontext.js"></script>
+      <script src="vexflow/src/tickable.js"></script>
+      <script src="vexflow/src/voice.js"></script>
+      <script src="vexflow/src/accidental.js"></script>
+      <script src="vexflow/src/articulation.js"></script>
+      <script src="vexflow/src/note.js"></script>
+      <script src="vexflow/src/barnote.js"></script>
+      <script src="vexflow/src/ghostnote.js"></script>
+      <script src="vexflow/src/bend.js"></script>
+      <script src="vexflow/src/dot.js"></script>
+      <script src="vexflow/src/stavenote.js"></script>
+      <script src="vexflow/src/formatter.js"></script>
+      <script src="vexflow/src/stavetie.js"></script>
+      <script src="vexflow/src/staveslur.js"></script>
+      <script src="vexflow/src/tabtie.js"></script>
+      <script src="vexflow/src/tabslide.js"></script>
+      <script src="vexflow/src/beam.js"></script>
+      <script src="vexflow/src/annotation.js"></script>
+      <script src="vexflow/src/renderer.js"></script>
+      <script src="vexflow/src/raphaelcontext.js"></script>
+      <script src="vexflow/src/tuning.js"></script>
+      <script src="vexflow/src/keysignature.js"></script>
+      <script src="vexflow/src/timesignature.js"></script>
+      <script src="vexflow/src/staveconnector.js"></script>
+      <!-- Support Sources -->
+      <script src="vexflow/tabdiv/support/jquery.js"></script>
+
+    </head>
+    <body>
+        <form>
+          <select id="music_selection" onchange="loadMusicXML(getSelectedFile())">
+            <option value="">--- Choose music ---</option>
+            <option value="examples/Schumann - Nordisches Lied.xml">Schumann - Nordisches Lied</option>
+            <option value="examples/test.xml">Tester</option>
+            <option value="examples/bach_toccata.xml">Bach - Toccata</option>
+            <option value="examples/march_turk.xml">Turk - March</option>
+            <option value="examples/spooks.xml">Spooks</option>
+            <option value="examples/Sonata No 14, Op 27 No 2 M1.xml">Beethoven - Moonlight sonata, mvt 1</option>
+            <option value="examples/Maple Leaf Rag.xml">Joplin - Maple Leaf Rag</option>
+            <option value="examples/Bach_WTC_Fugue_2_in_Cm_BWV_847.xml">Bach - WTC Fugue no. 2 in C minor</option>
+            <option value="examples/Bach Invention No 1.xml">Bach - Invention No 1</option>
+            <option value="examples/Nocturne No 21 in C minor.xml">Chopin - Nocturne No 21 in C minor</option>
+            <option value="examples/wtc fugue 2.xml">WTC fugue 2 in C minor</option>
+          </select>
+          <input onclick="shuffleScoreMeasures()" type="button" value="Mix up measures">
+          <input onclick="resetScoreMeasures()" type="button" value="Show original score">
+          <label id="info"></label>
+        </form>
+        <br />
+        <input onclick="turnPages(-1)" type="button" value="<">
+        <label id="pages"></label>
+        <input onclick="turnPages(1)" type="button" value=">">
+        <br />
+        <canvas id="score_canvas" width=1200 height=500 style="border-width: 3px; border-style:ridge; border-color:gray; background-color: #F5F0D0;"></canvas>
+        <br />
+        <iframe src="https://docs.google.com/spreadsheet/embeddedform?formkey=dHZCX3IyMERhdndnRkRIN084ZmxvN1E6MQ" width="760" height="655" frameborder="0" marginheight="0" marginwidth="0">Loading...</iframe>
+    </body>
+    
+    <script id=useful_methods>
+        // XML methods
+        var xmlutil = {
+          
+          hasTag: function(xml, tagname) {
+            return xml.getElementsByTagName(tagname).length > 0
+          },
+
+          getTagContent: function (xml, tagname) {
+            // Returns the textContent of the first tag w/ given name
+            if (!this.hasTag(xml, tagname)) {
+              console.log('Warning (xmlutil.getTagContent): the xml source has no tags named "' + tagname + '". Returning null.');
+              return null;
+            }
+            return xml.getElementsByTagName(tagname)[0].textContent;
+          },
+          
+          getTagNumberContent: function(xml, tagname) {
+            var tag_content = this.getTagContent(xml, tagname);
+            if (tag_content == null) console.log("Warning (xmlutil.getTagNumberContent): because the xml source had no such tags, a number couldn't be created. Returning 0.");
+            var n = Number(tag_content);
+            if (isNaN(n)) console.log("Warning (xmlutil.getTagNumberContent): the content of the first tag named '" + tagname + "' was '" + tag_content + "', which is not a number. Returning NaN.");
+            return n;
+          }
+          
+        }
+        
+        // Array methods
+        function isArray(a) {
+          return Object.prototype.toString.apply(a) === '[object Array]';
+        }
+        function getRandomIndex(array) {
+          return Math.floor(Math.random() * array.length);
+        }
+        function shuffleArray(array) {
+          if (!isArray(array)) { return; }
+          var shuffled_array = [];
+          for (i=0; i<array.length; i++) {
+            ind = getRandomIndex(array);
+            while (shuffled_array.indexOf(array[ind]) != -1) {
+              ind = getRandomIndex(array);
+            }
+            shuffled_array.push(array[ind]);
+          }
+          return shuffled_array;
+        }
+        function range(n) {
+          // Returns an array of consecutive integers from 0 to n
+          // (Similar to python's range function)
+          var array = [];
+          for (var i=0; i < n; i++) array.push(i);
+          return array
+        }
+        
+        // Canvas drawing methods
+        function drawMarker(ctx, x, y, color) {
+          if (!color) { color = "black"; }
+          original_style = ctx.fillStyle;
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, 2*Math.PI, false); 
+          ctx.fill();
+          ctx.closePath();
+          ctx.stroke();
+          ctx.fillStyle = original_style;
+        }
+    </script>
+    
+    <script id=vex_params>
+      // Default position of rests
+      rest_positions = {treble:"B/4", bass:"D/3"};
+
+      // Display constants
+      var page_width = 1200;  
+      var page_height = 500;
+      var default_staff_distance = 115;
+      var default_line_spacing = 120;
+      var default_measure_width = 350;
+      var x_margin = 50;
+      var y_margin = 10;
+      
+      // Conversions between constants in MusicXML and VexFlow
+      keys = {
+          "-7": "Cb",
+          "-6": "Gb",
+          "-5": "Db",
+          "-4": "Ab",
+          "-3": "Eb",
+          "-2": "Bb",
+          "-1": "F",
+          "0": "C",
+          "1": "G",
+          "2": "D",
+          "3": "A",
+          "4": "E",
+          "5": "B",
+          "6": "F#",
+          "7": "C#"
+      }
+      durations = {
+          1.5: "wd",
+          1: "w",
+          0.75: "hd",
+          0.5: "h",
+          0.375: "qd",
+          0.25: "q",
+          0.1875: "8d",
+          0.125: "8",
+          0.09375: "16d",
+          0.0625: "16",
+          0.046875: "32d",
+          0.03125: "32",
+          0.0234375: "64d",
+          0.015625: "64",
+          // Triplets
+          0.08333333333333333: "8",
+          0.16666666666666666: "q",
+          // String values
+          "whole": "w",
+          "half": "h",
+          "quarter": "q",
+          "eighth": "8",
+          "16th": "16",
+          "32nd": "32",
+          "64th": "64"
+      }
+      stem_dirs = {
+        null: null,
+        "up": Vex.Flow.StaveNote.STEM_UP,
+        "down": Vex.Flow.StaveNote.STEM_DOWN
+      }
+      yesno = {
+        'yes': true,
+        'no': false
+      }
+      
+      // Conversions between standard rhythm units and MusicXML's divisions
+      function computeDuration(num_divs, divisions) {
+        return durations[num_divs / (divisions * 4)]
+      };
+      function computeDivisions(duration, divisions) {
+        for (var d in durations) {
+          if (duration == durations[d]) return d * divisions * 4; 
+        }
+        console.log("Warning (computeDivisions):", duration, "isn't a valid duration value.")
+        return 0;
+      };
+    </script>
+    
+    <script src="lib/score.js"></script>
+    <script src="lib/measure.js"></script>
+    <script src="lib/voice.js"></script>
+    <script src="lib/chord.js"></script>
+    
+    <script id=main>
+      // Initialize variables
+      var score = null;
+      var current_page = 0;
+      var canvas = $("canvas")[0];
+      var ctx = new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS).getContext();
+      
+      // Clear the score's canvas
+      function resetCanvas() {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.translate(-1* page_width * current_page, 0);
+        showPageNum();
+      }
+      
+      // Display a message above the score
+      function info(message) {
+        document.getElementById("info").textContent = message;
+      }
+      
+      // Display the page number
+      function showPageNum() {
+        document.getElementById("pages").textContent = "Page " + (current_page+1);
+      }
+      
+      // Retrieve an XML object
+      function getXML(xmlfile) {
+        if (window.XMLHttpRequest) {
+          xmlhttp = new XMLHttpRequest();
+        }
+        else { // ie5, ie6
+          xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.open("GET", xmlfile, false);
+        xmlhttp.send();
+        return xmlhttp.responseXML;
+        }
+
+      // Determine which music file the user has chosen
+      function getSelectedFile() {
+        if (navigator.appName != "Microsoft Internet Explorer") {
+          //document.getElementById("score_canvas").width = screen.availWidth - 50;
+          //document.getElementById("score_canvas").height = screen.availHeight - 150;
+          select_box = document.getElementById("music_selection");
+          var music_xml_file = select_box.options[select_box.selectedIndex].value;
+          var title = select_box.options[select_box.selectedIndex].textContent;
+          console.log("Loading selected file:", music_xml_file);
+          select_box.blur();
+          return music_xml_file;
+        }
+      }
+      
+      // Load the score for a MusicXML file
+      function loadMusicXML(music_xml_file) {
+        if (music_xml_file == "") return;
+        var xml = getXML(music_xml_file);
+        // TODO: catch xml load errors
+        score = new Score();
+        score.initFromXML(xml.getElementsByTagName("part"))
+        ctx.setFont("Arial", 14, "");
+        current_page = 0;
+        resetCanvas();
+        score.draw(ctx);
+        showPageNum();
+      }
+      
+      // Rearrange the current score's measures
+      function shuffleScoreMeasures() {
+        if (score == null) return;
+        resetCanvas();
+        score.shuffleMeasures();
+        score.draw(ctx);
+      }
+    
+      // Arrange the score's measures in their normal order
+      function resetScoreMeasures() {
+        if (score == null) return;
+        resetCanvas();
+        score.resetMeasureOrder();
+        score.draw(ctx);
+      }
+    
+      // Turn the page of the score
+      function turnPages(num_pages) { // num_pages is usually +1 or -1
+        if (score == null) return;
+        if (current_page + num_pages < 0) return;
+        current_page += num_pages;
+        resetCanvas();
+        score.draw(ctx);
+      }
+    </script>
+</html>
