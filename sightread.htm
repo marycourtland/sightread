@@ -178,6 +178,23 @@
           "6": "F#",
           "7": "C#"
       }
+      keysigs = {
+          'C':  [],
+          'G':  ["F#"],
+          'D':  ["F#", "C#"],
+          'A':  ["F#", "C#", "G#"],
+          'E':  ["F#", "C#", "G#", "D#"],
+          'B':  ["F#", "C#", "G#", "D#", "A#"],
+          'F#': ["F#", "C#", "G#", "D#", "A#", "E#"],
+          'C#': ["F#", "C#", "G#", "D#", "A#", "E#", "B#"],
+          'Cb': ["Bb", "Eb", "Ab", "Db", "Gb", "Cb", "Fb"],
+          'Gb': ["Bb", "Eb", "Ab", "Db", "Gb", "Cb"],
+          'Db': ["Bb", "Eb", "Ab", "Db", "Gb"],
+          'Ab': ["Bb", "Eb", "Ab", "Db"],
+          'Eb': ["Bb", "Eb", "Ab"],
+          'Bb': ["Bb", "Eb"],
+          'F':  ["Bb"]
+      }
       durations = {
           1.5: "wd",
           1: "w",
@@ -214,6 +231,7 @@
         'yes': true,
         'no': false
       }
+      
       
       // Conversions between standard rhythm units and MusicXML's divisions
       function computeDuration(num_divs, divisions) {
